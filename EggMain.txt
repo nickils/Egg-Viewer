@@ -1,0 +1,123 @@
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local collectionService = game:GetService("CollectionService")
+local players = game:GetService("Players")
+local runService = game:GetService("RunService")
+local workspace = game:GetService("Workspace")
+
+local localPlayer = players.LocalPlayer
+local currentCamera = workspace.CurrentCamera
+local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+local hatchFunction = getupvalue(getupvalue(getconnections(replicatedStorage.GameEvents.PetEggService.OnClientEvent)[1].Function, 1), 2)
+local eggModels = getupvalue(hatchFunction, 1)
+local eggPets = getupvalue(hatchFunction, 2)
+
+local espCache = {}
+local activeEggs = {}
+local fadeAlpha = {}
+
+local function getObjectFromId(objectId)
+    for _, eggModel in pairs(eggModels) do
+        if eggModel:GetAttribute("OBJECT_UUID") == objectId then
+            return eggModel
+        end
+    end
+end
+
+local function UpdateEsp(objectId, petName)
+    local object = getObjectFromId(objectId)
+    if not object then return end
+    local label = espCache[objectId]
+    if not label then return end
+    local eggName = object:GetAttribute("EggName") or "Unknown"
+    label.Text = (petName or "?") .. " (" .. eggName .. ")"
+end
+
+local function AddEsp(object)
+    if not object:IsA("Instance") then return end
+    if object:GetAttribute("OWNER") ~= localPlayer.Name then return end
+    local objectId = object:GetAttribute("OBJECT_UUID")
+    if not objectId then return end
+    local eggName = object:GetAttribute("EggName") or "Unknown"
+    local petName = eggPets[objectId]
+    local label = Drawing.new("Text")
+    label.Text = (petName or "?") .. " (" .. eggName .. ")"
+    label.Size = 18
+    label.Color = Color3.new(1, 1, 1)
+    label.Outline = true
+    label.OutlineColor = Color3.new(0, 0, 0)
+    label.Center = true
+    label.Visible = false
+    label.Transparency = 0
+    espCache[objectId] = label
+    activeEggs[objectId] = object
+    fadeAlpha[objectId] = 0
+end
+
+local function RemoveEsp(object)
+    if not object:IsA("Instance") then return end
+    if object:GetAttribute("OWNER") ~= localPlayer.Name then return end
+    local objectId = object:GetAttribute("OBJECT_UUID")
+    if not objectId then return end
+    if espCache[objectId] then
+        pcall(function()
+            espCache[objectId]:Remove()
+        end)
+        espCache[objectId] = nil
+    end
+    activeEggs[objectId] = nil
+    fadeAlpha[objectId] = nil
+end
+
+local function UpdateAllEsp()
+    for objectId, object in pairs(activeEggs) do
+        local label = espCache[objectId]
+        if not label then continue end
+        if not object or not object:IsDescendantOf(workspace) then
+            fadeAlpha[objectId] = math.max((fadeAlpha[objectId] or 0) - 0.05, 0)
+            if fadeAlpha[objectId] <= 0 then
+                label.Visible = false
+            else
+                label.Transparency = fadeAlpha[objectId]
+            end
+        else
+            local pos, onScreen = currentCamera:WorldToViewportPoint(object:GetPivot().Position)
+            local distance = (rootPart.Position - object:GetPivot().Position).Magnitude
+            local targetAlpha = distance <= 45 and 1 or 0
+            local currentAlpha = fadeAlpha[objectId] or 0
+            if targetAlpha > currentAlpha then
+                fadeAlpha[objectId] = math.min(currentAlpha + 0.05, targetAlpha)
+            else
+                fadeAlpha[objectId] = math.max(currentAlpha - 0.05, targetAlpha)
+            end
+            label.Transparency = fadeAlpha[objectId]
+            label.Position = Vector2.new(pos.X, pos.Y)
+            label.Visible = onScreen and fadeAlpha[objectId] > 0
+
+            local t = math.clamp((distance - 10) / (45 - 10), 0, 1)
+            local r = 1
+            local g = 1 - t
+            local b = 0
+            label.Color = Color3.new(r, g, b)
+        end
+    end
+end
+
+for _, object in ipairs(collectionService:GetTagged("PetEggServer")) do
+    task.spawn(AddEsp, object)
+end
+
+collectionService:GetInstanceAddedSignal("PetEggServer"):Connect(AddEsp)
+collectionService:GetInstanceRemovedSignal("PetEggServer"):Connect(RemoveEsp)
+
+local old
+local connection = getconnections(replicatedStorage.GameEvents.EggReadyToHatch_RE.OnClientEvent)[1]
+if connection and connection.Function then
+    old = hookfunction(connection.Function, newcclosure(function(objectId, petName)
+        UpdateEsp(objectId, petName)
+        return old(objectId, petName)
+    end))
+end
+
+runService.PreRender:Connect(UpdateAllEsp)
