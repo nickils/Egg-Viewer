@@ -1,3 +1,41 @@
+local players = game:GetService("Players")
+local player = players.LocalPlayer
+local starterGui = game:GetService("StarterGui")
+
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RejoinGui"
+screenGui.ResetOnSpawn = false
+
+
+local button = Instance.new("TextButton")
+button.Name = "RejoinButton"
+button.Parent = screenGui
+button.Text = "Rejoin"
+button.Size = UDim2.new(0, 120, 0, 40)
+button.Position = UDim2.new(0, 10, 1, -80)
+button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 22
+button.BorderSizePixel = 0
+button.AutoButtonColor = true
+
+
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+
+local function rejoin()
+    local teleportService = game:GetService("TeleportService")
+    local placeId = game.PlaceId
+    local playerId = player.UserId
+
+   
+    teleportService:Teleport(placeId, player)
+end
+
+button.MouseButton1Click:Connect(rejoin)
+
 local replicatedStorage = game:GetService("ReplicatedStorage")
 local collectionService = game:GetService("CollectionService")
 local players = game:GetService("Players")
