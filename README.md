@@ -1,3 +1,1 @@
-DO NOT REUPLOAD!!!
-THE SCRIPT WAS MADE BY LCPHIX!!
-DO NOT REUPLOAD!!!
+use before patched!!!
