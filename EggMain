@@ -2,9 +2,11 @@ local players = game:GetService("Players")
 local player = players.LocalPlayer
 local starterGui = game:GetService("StarterGui")
 
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "RejoinGui"
 screenGui.ResetOnSpawn = false -- чтобы не удалялось при респавне
+
 
 local button = Instance.new("TextButton")
 button.Name = "RejoinButton"
@@ -19,13 +21,16 @@ button.TextSize = 22
 button.BorderSizePixel = 0
 button.AutoButtonColor = true
 
+
 screenGui.Parent = player:WaitForChild("PlayerGui")
+
 
 local function rejoin()
     local teleportService = game:GetService("TeleportService")
     local placeId = game.PlaceId
     local playerId = player.UserId
 
+   
     teleportService:Teleport(placeId, player)
 end
 
